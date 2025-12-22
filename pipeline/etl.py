@@ -187,7 +187,6 @@ def process_data():
 
     for config in SYMBOLS_CONFIG:
         process_symbol(df, config)
-        
     print("\n" + "="*60)
     print("ETL Process Completed Successfully.")
     print("="*60)

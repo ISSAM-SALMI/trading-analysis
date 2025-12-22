@@ -81,12 +81,38 @@ def detect_trend(ema_50, ema_200, adx, adx_threshold=25):
     else:
         return "Strong Downtrend", "#ef5350"
 
+# Asset Configuration
+ASSETS_CONFIG = {
+    "BTC": {
+        "name": "Bitcoin",
+        "symbol": "BTC/USD",
+        "file": "clean_btc_data.csv",
+        "color": "#f7931a",
+        "icon": "₿"
+    },
+    "ETH": {
+        "name": "Ethereum",
+        "symbol": "ETH/USD",
+        "file": "clean_eth_data.csv",
+        "color": "#627eea",
+        "icon": "Ξ"
+    },
+    "GOLD": {
+        "name": "Gold Futures",
+        "symbol": "GC=F",
+        "file": "clean_gold_data.csv",
+        "color": "#ffd700",
+        "icon": "🥇"
+    }
+}
+
 # Load Data
 @st.cache_data
-def load_data():
+def load_data(asset_key):
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(base_dir, 'data', 'output', 'clean_btc_data.csv')
+        filename = ASSETS_CONFIG[asset_key]["file"]
+        path = os.path.join(base_dir, 'data', 'output', filename)
         
         df = pd.read_csv(path)
         df.columns = df.columns.str.lower()
@@ -96,11 +122,24 @@ def load_data():
         st.error(f"Error loading data: {e}")
         return None
 
-df = load_data()
+# Sidebar for Asset selection
+st.sidebar.header("⚙️ Settings")
+
+# Asset selector
+selected_asset = st.sidebar.selectbox(
+    "Select Asset",
+    options=list(ASSETS_CONFIG.keys()),
+    format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {ASSETS_CONFIG[x]['name']} ({ASSETS_CONFIG[x]['symbol']})",
+    index=0
+)
+
+asset_info = ASSETS_CONFIG[selected_asset]
+
+# Load selected asset data
+df = load_data(selected_asset)
 
 if df is not None:
-    # Sidebar for Timeframe selection
-    st.sidebar.header("Settings")
+    st.sidebar.success(f"✅ {asset_info['name']} loaded")
     st.sidebar.info(f"📊 Data timeframe: 2 minutes")
     st.sidebar.info(f"📈 Total candles: {len(df)}")
     
@@ -197,11 +236,11 @@ if df is not None:
         st.sidebar.markdown(f"📊 **Total:** {total_buy + total_sell}")
         st.sidebar.info("💡 Only high-quality, well-spaced signals are displayed on chart")
 
-    # Header
+    # Header with dynamic asset info
     c1, c2, c3 = st.columns([1, 3, 1])
     with c1:
-        st.title("BTC/USD")
-        st.caption(f"Bitcoin / US Dollar ({timeframe})")
+        st.markdown(f"<h1 style='color:{asset_info['color']}'>{asset_info['icon']} {asset_info['symbol']}</h1>", unsafe_allow_html=True)
+        st.caption(f"{asset_info['name']} ({timeframe})")
     with c2:
         if len(df_resampled) > 0:
             latest = df_resampled.iloc[-1]
@@ -248,21 +287,23 @@ if df is not None:
         start_idx = max(0, total_candles - visible_candles)
         initial_range = [df_resampled.index[start_idx], df_resampled.index[-1]]
 
-    # Candlestick
+    # Candlestick with dynamic colors based on asset
+    increasing_color = asset_info['color'] if selected_asset == "GOLD" else '#26a69a'
+    
     candlestick = go.Candlestick(
         x=df_resampled.index,
         open=df_resampled['open'],
         high=df_resampled['high'],
         low=df_resampled['low'],
         close=df_resampled['close'],
-        name='BTC/USD',
-        increasing=dict(line=dict(color='#26a69a', width=1.5), fillcolor='#26a69a'),
+        name=asset_info['symbol'],
+        increasing=dict(line=dict(color=increasing_color, width=1.5), fillcolor=increasing_color),
         decreasing=dict(line=dict(color='#ef5350', width=1.5), fillcolor='#ef5350'),
         whiskerwidth=1,
         line=dict(width=1.5),
         hovertext=[
             f"<b>{date.strftime('%Y-%m-%d %H:%M')}</b><br><br>" +
-            f"<b style='color:#26a69a'>Open:</b>  ${row['open']:,.2f}<br>" +
+            f"<b style='color:{increasing_color}'>Open:</b>  ${row['open']:,.2f}<br>" +
             f"<b style='color:#ef5350'>Close:</b> ${row['close']:,.2f}<br>" +
             f"<b style='color:#4a9eff'>High:</b>  ${row['high']:,.2f}<br>" +
             f"<b style='color:#ff9800'>Low:</b>   ${row['low']:,.2f}<br><br>" +
@@ -506,7 +547,7 @@ if df is not None:
         'doubleClick': 'reset',
         'toImageButtonOptions': {
             'format': 'png',
-            'filename': 'btc_chart',
+            'filename': f'{selected_asset.lower()}_chart',
             'height': 1080,
             'width': 1920,
             'scale': 2
