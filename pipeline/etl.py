@@ -3,7 +3,7 @@ import os
 import sys
 
 # Define paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INPUT_FILE = os.path.join(BASE_DIR, 'data', 'input', 'data_2min.csv')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'data', 'output')
 
